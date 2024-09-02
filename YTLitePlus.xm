@@ -173,50 +173,39 @@ BOOL isSelf() {
 // Disable YouTube Plus incompatibility warning popup - @bhackel
 %hook UIView
 
-- (void)willMoveToWindow:(UIWindow *)newWindow {
+- (void)layoutSubviews {
+    // Check if the view's view controller is HelperVC
     UIResponder *responder = self;
     while (responder) {
         responder = [responder nextResponder];
-        if ([responder isKindOfClass:NSClassFromString(@"HelperVC")]) {
-            // View belongs to HelperVC, now proceed with getting the UIButton
-
-            if ([self.subviews count] > 4 && [[self.subviews objectAtIndex:4] isKindOfClass:[UIButton class]]) {
-                UIButton *button = [self.subviews objectAtIndex:4];
-
-                // Access the _targetActions ivar using KVC (Key-Value Coding)
-                NSArray *targetActions = [button valueForKey:@"_targetActions"];
-
-                if ([targetActions count] > 0) {
-                    id controlTargetAction = [targetActions objectAtIndex:0];
-
-                    // Use KVC to get the _actionHandler (which is of type UIAction)
-                    UIAction *actionHandler = [controlTargetAction valueForKey:@"_actionHandler"];
-
-                    if (actionHandler && [actionHandler isKindOfClass:[UIAction class]]) {
-                        // Access the handler property of UIAction
-                        void (^handlerBlock)(void) = [actionHandler valueForKey:@"handler"];
-
-                        // Invoke the handler block
-                        if (handlerBlock) {
-                            handlerBlock();  // Call the block
-                        }
-                    }
-                }
+        if ([responder isKindOfClass:[UIViewController class]]) {
+            if ([NSStringFromClass([responder class]) isEqualToString:@"HelperVC"]) {
+                // If it's HelperVC, neutralize the view
+                // self.bounds = CGRectZero;
+                // self.hidden = YES;
+                // self.userInteractionEnabled = NO;
+                // [self removeFromSuperview];
+                break;
             }
-            
-            // Prevent the view from being added to the window
-            [self removeFromSuperview];
-            return;  // Exit early to prevent further processing
         }
     }
 
-    %orig(newWindow);  // Call the original method if the view doesn't belong to HelperVC
+    %orig; // Call the original method
 }
 
+- (void)didMoveToSuperview {
+    %orig;
+
+    // Log the properties of the view
+    NSLog(@"bhackel UIView added to hierarchy: %@", self);
+    NSLog(@"bhackel View class: %@", NSStringFromClass([self class]));
+    NSLog(@"bhackel Frame: %@", NSStringFromCGRect(self.frame));
+    NSLog(@"bhackel Background Color: %@", self.backgroundColor);
+    NSLog(@"bhackel Alpha: %f", self.alpha);
+}
+
+
 %end
-
-
-
 
 // A/B flags
 %hook YTColdConfig 
